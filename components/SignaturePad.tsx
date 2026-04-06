@@ -34,7 +34,7 @@ export default function SignaturePad({ onSave, onClear }: SignaturePadProps) {
   }, []);
 
   // ── Coordinate helpers ───────────────────────────────────────────────────────
-  function getPos(canvas: HTMLCanvasElement, e: MouseEvent | Touch) {
+  function getPos(canvas: HTMLCanvasElement, e: MouseEvent | { clientX: number; clientY: number }) {
     const rect = canvas.getBoundingClientRect();
     return {
       x: ('clientX' in e ? e.clientX : (e as Touch).clientX) - rect.left,
