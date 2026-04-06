@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base:     #0A0C0F;
+  --bg-surface:  #12151A;
+  --bg-elevated: #1A1F26;
+  --bg-border:   #252C35;
+  --bg-hover:    #1F252E;
+
+  --ink-primary:   #E8ECF0;
+  --ink-secondary: #8A95A3;
+  --ink-muted:     #505A65;
+
+  --amber:  #F59E0B;
+  --green:  #22C55E;
+  --red:    #EF4444;
+  --yellow: #F59E0B;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--bg-base);
+  color: var(--ink-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--bg-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2E3844; }
+
+/* ── Focus rings ──────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Input base ───────────────────────────────────────────────────────────── */
+.wms-input {
+  @apply w-full bg-bg-elevated border border-bg-border rounded px-3 py-2.5
+         text-ink-primary font-body text-sm
+         placeholder:text-ink-muted
+         focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500
+         transition-colors duration-150;
+}
+
+.wms-label {
+  @apply block text-xs font-semibold text-ink-secondary uppercase tracking-wider mb-1.5;
+}
+
+.wms-btn-primary {
+  @apply inline-flex items-center justify-center gap-2
+         bg-amber-500 hover:bg-amber-400 active:bg-amber-600
+         text-bg-base font-semibold text-sm rounded px-4 py-2.5
+         transition-colors duration-150 cursor-pointer
+         disabled:opacity-40 disabled:cursor-not-allowed;
+}
+
+.wms-btn-secondary {
+  @apply inline-flex items-center justify-center gap-2
+         bg-bg-elevated hover:bg-bg-hover border border-bg-border
+         text-ink-primary font-medium text-sm rounded px-4 py-2.5
+         transition-colors duration-150 cursor-pointer;
+}
+
+.wms-card {
+  @apply bg-bg-surface border border-bg-border rounded-lg;
+}
+
+/* ── Status badges ────────────────────────────────────────────────────────── */
+.badge-good     { @apply bg-status-goodBg text-status-good   border border-status-good/20; }
+.badge-low      { @apply bg-status-lowBg  text-status-low    border border-status-low/20; }
+.badge-critical { @apply bg-status-critBg text-status-critical border border-status-critical/20; }
+.badge-empty    { @apply bg-status-emptyBg text-status-empty  border border-status-empty/20; }
+
+/* ── Reorder alert pulse ──────────────────────────────────────────────────── */
+.reorder-pulse {
+  animation: reorderPulse 2s ease-in-out infinite;
+}
+@keyframes reorderPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+.wms-table th {
+  @apply bg-bg-elevated text-ink-secondary text-xs font-semibold uppercase tracking-wider
+         px-3 py-2.5 text-left border-b border-bg-border sticky top-0 z-10;
+}
+.wms-table td {
+  @apply px-3 py-2.5 text-sm border-b border-bg-border/50 font-mono;
+}
+.wms-table tr:hover td {
+  @apply bg-bg-hover;
+}
