@@ -1,160 +1,78 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { Icon } from '@/components/ui';
 
-interface SignaturePadProps {
-  onSave: (base64: string) => void;
-  onClear?: () => void;
-}
+interface Props { onSave: (dataUrl: string) => void; onClear?: () => void; }
 
-export default function SignaturePad({ onSave, onClear }: SignaturePadProps) {
+/**
+ * Finger / mouse signature. Exports a compact PNG (max 480×160 CSS px) so it
+ * fits comfortably in a Google Sheets cell.
+ */
+export default function SignaturePad({ onSave, onClear }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isDrawing  = useRef(false);
-  const lastPos    = useRef<{ x: number; y: number } | null>(null);
-  const [isEmpty, setIsEmpty]   = useState(true);
-  const [saved,   setSaved]     = useState(false);
+  const drawing = useRef(false);
+  const last = useRef<{ x: number; y: number } | null>(null);
+  const [empty, setEmpty] = useState(true);
+  const [saved, setSaved] = useState(false);
 
-  // ── Canvas setup ────────────────────────────────────────────────────────────
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
-
-    // Retina / high-DPI support
-    const dpr  = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width  = rect.width  * dpr;
-    canvas.height = rect.height * dpr;
+    const c = canvasRef.current; if (!c) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = c.getBoundingClientRect();
+    c.width = rect.width * dpr; c.height = rect.height * dpr;
+    const ctx = c.getContext('2d')!;
     ctx.scale(dpr, dpr);
-
-    ctx.strokeStyle = '#E8ECF0';
-    ctx.lineWidth   = 2.2;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
+    ctx.strokeStyle = '#111827'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   }, []);
 
-  // ── Coordinate helpers ───────────────────────────────────────────────────────
-  function getPos(canvas: HTMLCanvasElement, e: MouseEvent | { clientX: number; clientY: number }) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: ('clientX' in e ? e.clientX : (e as Touch).clientX) - rect.left,
-      y: ('clientY' in e ? e.clientY : (e as Touch).clientY) - rect.top,
-    };
-  }
-
-  // ── Draw ─────────────────────────────────────────────────────────────────────
-  function draw(pos: { x: number; y: number }) {
-    const canvas = canvasRef.current;
-    if (!canvas || !isDrawing.current) return;
-    const ctx = canvas.getContext('2d')!;
-    ctx.beginPath();
-    if (lastPos.current) {
-      ctx.moveTo(lastPos.current.x, lastPos.current.y);
-    }
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-    lastPos.current = pos;
-    setIsEmpty(false);
-    setSaved(false);
-  }
-
-  // ── Mouse events ─────────────────────────────────────────────────────────────
-  const onMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    isDrawing.current = true;
-    lastPos.current = getPos(canvasRef.current!, e.nativeEvent);
+  const pos = (e: { clientX: number; clientY: number }) => {
+    const r = canvasRef.current!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
-  const onMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    draw(getPos(canvasRef.current!, e.nativeEvent));
+  const start = (p: { x: number; y: number }) => { drawing.current = true; last.current = p; };
+  const move = (p: { x: number; y: number }) => {
+    if (!drawing.current || !canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d')!;
+    ctx.beginPath(); if (last.current) ctx.moveTo(last.current.x, last.current.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last.current = p; setEmpty(false); setSaved(false);
   };
-  const onMouseUp   = () => { isDrawing.current = false; lastPos.current = null; };
+  const end = () => { drawing.current = false; last.current = null; };
 
-  // ── Touch events ─────────────────────────────────────────────────────────────
-  const onTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    isDrawing.current = true;
-    lastPos.current = getPos(canvasRef.current!, e.touches[0]);
-  };
-  const onTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    draw(getPos(canvasRef.current!, e.touches[0]));
-  };
-  const onTouchEnd  = () => { isDrawing.current = false; lastPos.current = null; };
-
-  // ── Clear ─────────────────────────────────────────────────────────────────────
-  const handleClear = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setIsEmpty(true);
-    setSaved(false);
-    onClear?.();
+  const clear = useCallback(() => {
+    const c = canvasRef.current; if (!c) return;
+    c.getContext('2d')!.clearRect(0, 0, c.width, c.height);
+    setEmpty(true); setSaved(false); onClear?.();
   }, [onClear]);
 
-  // ── Save ──────────────────────────────────────────────────────────────────────
-  const handleSave = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || isEmpty) return;
-    // Composite onto a dark background so it's legible when stored
-    const offscreen   = document.createElement('canvas');
-    offscreen.width   = canvas.width;
-    offscreen.height  = canvas.height;
-    const offCtx      = offscreen.getContext('2d')!;
-    offCtx.fillStyle  = '#12151A';
-    offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
-    offCtx.drawImage(canvas, 0, 0);
-    const base64 = offscreen.toDataURL('image/png');
-    onSave(base64);
+  const save = useCallback(() => {
+    const c = canvasRef.current; if (!c || empty) return;
+    const off = document.createElement('canvas');
+    const W = 480, H = 160;
+    off.width = W; off.height = H;
+    const ctx = off.getContext('2d')!;
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(c, 0, 0, W, H);
+    onSave(off.toDataURL('image/png'));
     setSaved(true);
-  }, [isEmpty, onSave]);
+  }, [empty, onSave]);
 
   return (
     <div className="space-y-2">
-      {/* Canvas */}
-      <div className="relative rounded border border-bg-border overflow-hidden bg-bg-elevated">
-        {isEmpty && (
-          <span className="absolute inset-0 flex items-center justify-center
-                           text-ink-muted text-sm font-body pointer-events-none select-none">
-            Sign here with your finger or mouse
-          </span>
-        )}
-        <canvas
-          ref={canvasRef}
-          className="w-full h-32 touch-none cursor-crosshair"
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        />
+      <div className="relative rounded border border-line bg-white overflow-hidden">
+        {empty && <span className="absolute inset-0 flex items-center justify-center text-ink-4 text-sm pointer-events-none select-none">Sign here with your finger or mouse</span>}
+        <div className="absolute left-4 right-4 bottom-8 border-b border-dashed border-line pointer-events-none" />
+        <canvas ref={canvasRef} className="w-full h-36 touch-none cursor-crosshair block"
+                onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); start(pos(e)); }}
+                onPointerMove={(e) => move(pos(e))}
+                onPointerUp={end} onPointerLeave={end} onPointerCancel={end} />
       </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handleClear}
-          className="wms-btn-secondary text-xs px-3 py-1.5"
-        >
-          Clear
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isEmpty}
-          className="wms-btn-primary text-xs px-3 py-1.5 flex-1"
-        >
-          {saved ? '✓ Signature Saved' : 'Confirm Signature'}
+      <div className="flex gap-2">
+        <button type="button" onClick={clear} className="btn-secondary btn-sm">Clear</button>
+        <button type="button" onClick={save} disabled={empty} className={`btn-sm flex-1 ${saved ? 'btn-secondary text-good' : 'btn-primary'}`}>
+          <Icon name="check" size={15} /> {saved ? 'Signature attached' : 'Confirm signature'}
         </button>
       </div>
-
-      {saved && (
-        <p className="text-xs text-status-good flex items-center gap-1.5">
-          <span>✓</span> Signature captured and attached to this entry
-        </p>
-      )}
     </div>
   );
 }

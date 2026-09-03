@@ -1,47 +1,75 @@
 // ─── Shared Types ─────────────────────────────────────────────────────────────
 
+import type { CompanyId } from './companies';
+
 export type TxnType = 'IN' | 'OUT';
+/** What the user chose on the form. TRANSFER writes two rows (OUT + IN). */
+export type MovementKind = 'IN' | 'OUT' | 'TRANSFER';
+/** What a single stored row means */
+export type Movement = 'RECEIPT' | 'ISSUE' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ADJUSTMENT';
 export type StockStatus = 'GOOD' | 'LOW' | 'CRITICAL' | 'EMPTY';
 export type EntryType = 'NORMAL' | 'ADMIN';
+export type LocationType = 'WAREHOUSE' | 'STORAGE';
 
-/** Raw transaction as stored in Google Sheets */
+/** A warehouse or a storage area. STORAGE areas usually hang off a WAREHOUSE. */
+export interface Location {
+  id: string;
+  name: string;
+  type: LocationType;
+  /** Empty for top-level warehouses */
+  parentId: string;
+  site: string;
+  active: boolean;
+  notes: string;
+}
+
+/** Raw transaction as stored in Google Sheets (one row) */
 export interface Transaction {
   id: string;
   itemName: string;
   quantity: number;
   unit: string;
   type: TxnType;
-  /** The real-world time the event happened (user-provided or auto) */
   actualDateTime: string;
-  /** System timestamp: when this row was written to the sheet */
   logDateTime: string;
   isLateEntry: boolean;
   lateEntryReason: string;
   signoffName: string;
   signoffEmail: string;
-  /** Base64 PNG of the drawn signature, or empty string */
   signature: string;
   notes: string;
   entryType: EntryType;
+  // v2 columns
+  locationId: string;
+  locationName: string;
+  movement: Movement;
+  /** For transfers: the other location; shared ref links the two rows */
+  counterpartLocationId: string;
+  transferRef: string;
 }
 
-/** What we receive from the Tab 1 form */
+/** What we receive from the Log form */
 export interface TransactionInput {
+  company: CompanyId;
+  locationId: string;
+  /** Required when kind === 'TRANSFER' */
+  toLocationId?: string;
+  kind: MovementKind;
   itemName: string;
   quantity: number;
   unit: string;
-  type: TxnType;
   actualDateTime: string;
   isLateEntry: boolean;
   lateEntryReason: string;
   signoffName: string;
   signoffEmail: string;
+  /** data-URL PNG or '' */
   signature: string;
   notes: string;
   entryType: EntryType;
 }
 
-/** Computed stock row for Tab 2 */
+/** Computed stock row */
 export interface StockItem {
   itemName: string;
   category: string;
@@ -52,18 +80,17 @@ export interface StockItem {
   lowThreshold: number;
   criticalThreshold: number;
   status: StockStatus;
-  /** ISO date string or null */
   estimatedStockoutDate: string | null;
-  /** Quantity at which to reorder */
   reorderPoint: number;
   needsReorder: boolean;
   lastIn: string | null;
   lastOut: string | null;
   isAdminAdded: boolean;
   avgLeadTimeDays: number | null;
+  /** Per-location breakdown (only present on rolled-up rows) */
+  byLocation?: Array<{ locationId: string; locationName: string; netStock: number }>;
 }
 
-/** Item master record */
 export interface ItemMaster {
   itemId: string;
   itemName: string;
@@ -78,7 +105,6 @@ export interface ItemMaster {
   firstRecordedDate: string;
 }
 
-/** PIN entry stored in Config sheet */
 export interface PinEntry {
   pin: string;
   name: string;
@@ -86,10 +112,33 @@ export interface PinEntry {
   role: 'STAFF' | 'ADMIN';
 }
 
-/** Local offline queue entry */
 export interface OfflineQueueEntry {
-  id: string;            // local UUID
+  id: string;
   payload: TransactionInput;
-  queuedAt: string;      // ISO timestamp
+  queuedAt: string;
   retryCount: number;
+}
+
+export interface TrendItem {
+  itemName: string;
+  category: string;
+  unit: string;
+  inTotal: number;
+  inPerDay: number;
+  inPerWeek: number;
+  inPerMonth: number;
+  outTotal: number;
+  outPerDay: number;
+  outPerWeek: number;
+  outPerMonth: number;
+  avgLeadTimeDays: number | null;
+  lastInDaysAgo: number | null;
+  daysSinceLastReorder: number | null;
+  reorderPoint: number | null;
+  netStock: number;
+  estimatedDaysLeft: number | null;
+  isAnomalous: boolean;
+  anomalyReason: string;
+  /** last 30 days, daily OUT qty */
+  sparkline: number[];
 }

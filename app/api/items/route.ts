@@ -1,15 +1,19 @@
 /**
- * GET  /api/items  — Returns the item master list (names + units for dropdown)
- * POST /api/items  — Admin: adds a new item to the Item Master sheet
+ * GET  /api/items?company=…  — item master (for dropdowns)
+ * POST /api/items?company=…  — admin: add an item (x-admin-passphrase)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getItems, addItem } from '@/lib/sheets';
-import type { ItemMaster } from '@/lib/types';
+import { requireCompany, isResponse, isAdminRequest } from '@/lib/request';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
+  const company = requireCompany(req);
+  if (isResponse(company)) return company;
   try {
-    const items = await getItems();
+    const items = await getItems(company.id);
     return NextResponse.json({ items }, { status: 200 });
   } catch (err) {
     console.error('[GET /api/items]', err);
@@ -18,35 +22,33 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const company = requireCompany(req);
+  if (isResponse(company)) return company;
+  if (!isAdminRequest(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   try {
-    // Verify admin passphrase (server-side check)
-    const passphrase = req.headers.get('x-admin-passphrase');
-    if (passphrase !== process.env.ADMIN_PASSPHRASE) {
-      return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
-    }
-
     const body = await req.json();
     const errors: string[] = [];
-    if (!body.itemName?.trim())   errors.push('Item name is required');
+    if (!body.itemName?.trim())    errors.push('Item name is required');
     if (!body.defaultUnit?.trim()) errors.push('Unit is required');
-    if (errors.length > 0) {
-      return NextResponse.json({ error: errors.join('; ') }, { status: 400 });
+    if (errors.length) return NextResponse.json({ error: errors.join('; ') }, { status: 400 });
+
+    const existing = await getItems(company.id);
+    if (existing.some((i) => i.itemName.toLowerCase() === String(body.itemName).trim().toLowerCase())) {
+      return NextResponse.json({ error: 'An item with that name already exists' }, { status: 409 });
     }
 
-    const newItem: Omit<ItemMaster, 'itemId' | 'firstRecordedDate'> = {
-      itemName:            body.itemName.trim(),
+    const item = await addItem(company.id, {
+      itemName:            String(body.itemName).trim(),
       category:            body.category?.trim() || 'General',
-      defaultUnit:         body.defaultUnit.trim(),
+      defaultUnit:         String(body.defaultUnit).trim(),
       lowThreshold:        parseFloat(body.lowThreshold) || 0,
       criticalThreshold:   parseFloat(body.criticalThreshold) || 0,
       avgLeadTimeDays:     body.avgLeadTimeDays ? parseFloat(body.avgLeadTimeDays) : null,
       avgDailyConsumption: body.avgDailyConsumption ? parseFloat(body.avgDailyConsumption) : null,
       reorderPoint:        body.reorderPoint ? parseFloat(body.reorderPoint) : null,
       isAdminAdded:        true,
-    };
-
-    await addItem(newItem);
-    return NextResponse.json({ success: true }, { status: 201 });
+    });
+    return NextResponse.json({ success: true, item }, { status: 201 });
   } catch (err) {
     console.error('[POST /api/items]', err);
     return NextResponse.json({ error: 'Failed to add item.' }, { status: 500 });

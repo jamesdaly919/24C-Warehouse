@@ -2,84 +2,54 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
   content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       fontFamily: {
-        display: ['Syne', 'sans-serif'],
-        body: ['DM Sans', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       colors: {
-        bg: {
-          base: '#0A0C0F',
-          surface: '#12151A',
-          elevated: '#1A1F26',
-          border: '#252C35',
-          hover: '#1F252E',
+        // Per-company accent — set as CSS variables on the app wrapper
+        brand: {
+          DEFAULT: 'var(--brand)',
+          dark:    'var(--brand-dark)',
+          soft:    'var(--brand-soft)',
+          on:      'var(--on-brand)',
         },
-        amber: {
-          50:  '#fffbeb',
-          100: '#fef3c7',
-          200: '#fde68a',
-          300: '#fcd34d',
-          400: '#fbbf24',
-          500: '#f59e0b',
-          600: '#d97706',
-          700: '#b45309',
-          800: '#92400e',
-          900: '#78350f',
-        },
-        ink: {
-          primary: '#E8ECF0',
-          secondary: '#8A95A3',
-          muted: '#505A65',
-          inverse: '#0A0C0F',
-        },
-        status: {
-          good:     '#22C55E',
-          goodBg:   '#052512',
-          low:      '#F59E0B',
-          lowBg:    '#1C1200',
-          critical: '#EF4444',
-          critBg:   '#1C0505',
-          empty:    '#6B7280',
-          emptyBg:  '#111318',
-        },
-        txn: {
-          in:    '#22C55E',
-          inBg:  '#052512',
-          out:   '#EF4444',
-          outBg: '#1C0505',
+        // Neutral scale (light UI)
+        canvas:  '#F4F5F7',
+        surface: '#FFFFFF',
+        line:    { DEFAULT: '#E5E7EB', strong: '#D1D5DB' },
+        ink:     { DEFAULT: '#111827', 2: '#4B5563', 3: '#6B7280', 4: '#9CA3AF' },
+        // Semantics
+        good:     { DEFAULT: '#15803D', bg: '#ECFDF3', line: '#BBF7D0' },
+        low:      { DEFAULT: '#B45309', bg: '#FFFBEB', line: '#FDE68A' },
+        critical: { DEFAULT: '#B91C1C', bg: '#FEF2F2', line: '#FECACA' },
+        empty:    { DEFAULT: '#475569', bg: '#F1F5F9', line: '#CBD5E1' },
+        move: {
+          in:    '#15803D', inBg:  '#ECFDF3',
+          out:   '#B91C1C', outBg: '#FEF2F2',
+          trf:   '#4338CA', trfBg: '#EEF2FF',
         },
       },
-      borderRadius: {
-        DEFAULT: '6px',
-        sm: '4px',
-        lg: '10px',
-        xl: '14px',
-      },
+      borderRadius: { sm: '6px', DEFAULT: '10px', lg: '14px', xl: '20px' },
       boxShadow: {
-        'glow-amber': '0 0 20px rgba(245,158,11,0.15)',
-        'glow-green': '0 0 20px rgba(34,197,94,0.10)',
-        'glow-red':   '0 0 20px rgba(239,68,68,0.10)',
-        'panel':      '0 4px 24px rgba(0,0,0,0.5)',
+        card:  '0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)',
+        lift:  '0 4px 12px rgba(16,24,40,.08), 0 1px 3px rgba(16,24,40,.06)',
+        modal: '0 24px 48px -12px rgba(16,24,40,.25)',
       },
       animation: {
-        'fade-in':   'fadeIn 0.2s ease-out',
-        'slide-up':  'slideUp 0.3s ease-out',
-        'pulse-dot': 'pulseDot 2s cubic-bezier(0.4,0,0.6,1) infinite',
+        'fade-in':  'fadeIn .18s ease-out',
+        'slide-up': 'slideUp .22s ease-out',
+        'pop':      'pop .25s cubic-bezier(.2,.9,.3,1.2)',
       },
       keyframes: {
         fadeIn:  { from: { opacity: '0' }, to: { opacity: '1' } },
-        slideUp: { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
-        pulseDot: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.3' },
-        },
+        slideUp: { from: { opacity: '0', transform: 'translateY(6px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+        pop:     { from: { opacity: '0', transform: 'scale(.96)' }, to: { opacity: '1', transform: 'scale(1)' } },
       },
     },
   },
